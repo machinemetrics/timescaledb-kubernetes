@@ -2,3 +2,7 @@
 
 **/*secret*
 !**/*secret*-example*
+**/*.crt
+**/*.key
+**/pgbackrest.conf
+**/credentials.conf

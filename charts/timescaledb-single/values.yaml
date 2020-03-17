@@ -209,6 +209,7 @@ loadBalancer:
   # If not enabled, we still expose the primary using a so called Headless Service
   # https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
   enabled: True
+  port: 5432
   # Read more about the AWS annotations here:
   # https://kubernetes.io/docs/concepts/cluster-administration/cloud-providers/#aws
   # https://docs.aws.amazon.com/eks/latest/userguide/load-balancing.html
@@ -224,6 +225,7 @@ replicaLoadBalancer:
   # If not enabled, we still expose the replica's using a so called Headless Service
   # https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
   enabled: False
+  port: 5432
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "4000"
 
@@ -288,6 +290,21 @@ resources: {}
   # requests:
   #   cpu: 100m
   #   memory: 128Mi
+
+sharedMemory:
+  # By default Kubernetes only provides 64MB to /dev/shm
+  # /dev/shm is only used by PostgreSQL for work_mem for parallel workers,
+  # so most will not run into this issue.
+  # https://github.com/kubernetes/kubernetes/issues/28272
+  #
+  # If you do however run into:
+  #
+  #   SQLSTATE 53100
+  #   ERROR:  could not resize shared memory segment "/PostgreSQL.12345" to 4194304 bytes:
+  #   No space left on device
+  #
+  # you may wish to use a mount to Memory, by setting useMount to true
+  useMount: false
 
 # timescaledb-tune will be run with the Pod resources requests or - if not set - its limits.
 # This should give a reasonably tuned PostgreSQL instance.
@@ -375,7 +392,7 @@ affinityTemplate: |
         topologyKey: "kubernetes.io/hostname"
         labelSelector:
           matchLabels:
-            app:  {{ template "timescaledb.name" . }}
+            app: {{ template "timescaledb.fullname" . }}
             release: {{ .Release.Name | quote }}
             cluster-name: {{ template "clusterName" . }}
     - weight: 50
@@ -383,7 +400,7 @@ affinityTemplate: |
         topologyKey: failure-domain.beta.kubernetes.io/zone
         labelSelector:
           matchLabels:
-            app:  {{ template "timescaledb.name" . }}
+            app: {{ template "timescaledb.fullname" . }}
             release: {{ .Release.Name | quote }}
             cluster-name: {{ template "clusterName" . }}
 affinity: {}
